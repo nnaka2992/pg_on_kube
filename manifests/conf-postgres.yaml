@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+    app.kubernetes.io/name: postgres
+    type: file
+  namespace: postgres
+data:
+  postgresql.conf: |
+    listen_addresses = '*'
+    max_wal_senders = 5
+    max_wal_size = 10GB
+    wal_level = replica
+    synchronous_commit = on
+    archive_mode = on
+    #archive_command = 'cp %p /archives/%f'
+    archive_command = 'test ! -f /archives/%f && cp %p /archives/%f'
+    wal_sender_timeout = 1s
+    synchronous_standby_names = 'FIRST 2(*)'
+    restore_command = 'cp /archives/%f %p'
+    recovery_target_timeline = 'latest'
+#    log_destination = 'jsonlog'		# Valid values are combinations of
+#    logging_collector = on		# Enable capturing of stderr, jsonlog,
+#    log_directory = '/var/log/psql'			# directory where log files are written,
+#    log_filename = 'postgresql-%Y-%m-%d_%H%M.log'	# log file name pattern,
+#    log_min_messages = warning		# values in order of decreasing detail:
+#    log_min_error_statement = error	# values in order of decreasing detail:
+#    log_min_duration_statement = 100	# -1 is disabled, 0 logs all statements
+#    compute_query_id = auto
+#    log_statement_stats = on
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    # "local" is for Unix domain socket connections only
+    local   all             all                                     trust
+    # IPv4 local connections:
+    host    all             all             127.0.0.1/32            trust
+    # IPv6 local connections:
+    host    all             all             ::1/128                 trust
+    # Allow replication connections from localhost, by a user with the
+    # replication privilege.
+    local   replication     all                                     trust
+    host    replication     all             127.0.0.1/32            trust
+    host    replication     all             ::1/128                 trust
+    #
+    host    all             all             10.0.0.0/8              trust
+    host    replication     all             10.0.0.0/8              trust
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgenv
+  labels:
+    app: postgres
+    app.kubernetes.io/name: postgres
+    type: env
+  namespace: postgres
+data:
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_DB: postgres
+  PGDATA: /var/lib/postgresql/data/
+  TZ: Asia/Tokyo
